@@ -1,0 +1,22 @@
+\documentclass[11pt]{article}
+
+\usepackage{listings}
+%\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[left=2cm,right=2cm,bottom=3cm,top=3cm]{geometry}
+
+% \renewcommand{\rmdefault}{lmodern}
+
+\begin{document}
+\title{LET language specification}
+\maketitle
+
+\lstset{language=Lisp,
+  basicstyle=\sffamily,
+  mathescape,
+  escapeinside={<}{>},
+  columns=flexible}
+
+\lstinputlisting{let-specification.rkt}
+
+\end{document}
