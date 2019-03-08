@@ -180,11 +180,11 @@
 
          ;; ex 3.8
          [equal?-exp (exp1 exp2)
-                     (exp-binary exp1 exp2 bool-val expval->num = env)]
+                     (num-pred exp1 exp2 = env)]
          [greater?-exp (exp1 exp2)
-                       (exp-binary exp1 exp2 bool-val expval->num > env)]
+                       (num-pred exp1 exp2 > env)]
          [less?-exp (exp1 exp2)
-                    (exp-binary exp1 exp2 bool-val expval->num < env)]
+                    (num-pred exp1 exp2 < env)]
 
          ;; ex 3.9
          [cons-exp (exp1 exp2)
@@ -229,8 +229,13 @@
                       (num-val (* -1 num1)))]))
 
 
+;; General procedure for integer arithmetic
 (define (num-op exp1 exp2 proc env)
   (exp-binary exp1 exp2 num-val expval->num proc env))
+
+;; General procedure for integer predicates, e.g. less?
+(define (num-pred exp1 exp2 proc env)
+  (exp-binary exp1 exp2 bool-val expval->num proc env))
 
 (define (exp-binary exp1 exp2 wrapper unwrapper proc env)
   (let* ((val1 (value-of exp1 env))

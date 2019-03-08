@@ -98,3 +98,17 @@ Expression ::= list ({Expression}*)
       (empty-val)
       (list-val (value-of (car exps) env)
                 (value-of (list-exp (cdr exps)) env)))
+
+<\subsubsection*{3.12 - Cond}>
+<\subsubsection*{Grammar}>
+
+Expression ::= cond {Expression ==> Expression}* end
+
+<\subsubsection*{Specification}>
+
+(value-of (cond-exp exps) env)
+= (if (null? exps)
+      (error)
+      (if (expval->bool (value-of (caar exps) env))
+          (value-of (caddar exps) env)
+          (value-of (cond-exp (cdr exps)) env)))
