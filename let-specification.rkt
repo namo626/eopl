@@ -99,16 +99,51 @@ Expression ::= list ({Expression}*)
       (list-val (value-of (car exps) env)
                 (value-of (list-exp (cdr exps)) env)))
 
-<\subsubsection*{3.12 - Cond}>
+<\subsection*{3.12 - Cond}>
 <\subsubsection*{Grammar}>
 
 Expression ::= cond {Expression ==> Expression}* end
 
 <\subsubsection*{Specification}>
 
-(value-of (cond-exp exps) env)
-= (if (null? exps)
+(value-of (cond-exp preds conseqs) env)
+= (if (null? preds)
       (error)
-      (if (expval->bool (value-of (caar exps) env))
-          (value-of (caddar exps) env)
-          (value-of (cond-exp (cdr exps)) env)))
+      (if (expval->bool (value-of (car preds) env))
+          (value-of (car conseqs) env)
+          (value-of (cond-exp (cdr preds) (cdr conseqs)) env)))
+
+<\subsection*{3.14 - Boolean expressions (Int is now the only expressed value}>
+<\subsubsection*{Grammar}>
+
+Bool-expression ::= equal? (Expression, Expression)
+                ::= less? (Expression, Expression)
+                ::= greater? (Expression, Expression)
+                ::= zero? (Expression)
+                ::= null? (Expression)
+
+Expression ::= if Bool-expression then Expression else Expression
+           ::= cond {Bool-expression ==> Expression}* end
+
+<\subsubsection*{Specification}>
+
+(value-of-bool-exp (equal?-exp exp1 exp2) env)
+= (= (expval->num (value-of exp1 env))
+     (expval->num (value-of exp2 env)))
+
+(value-of-bool-exp (zero?-exp exp) env)
+= (zero? (expval->num (value-of exp env)))
+
+(value-of-bool-exp (null?-exp exp) env)
+= (null? (expval->list (value-of exp env)))
+
+<\subsection*{3.16 - Let}>
+<\subsubsection*{Grammar}>
+
+Expression ::= let {Identifier = Expression}* in Expression
+
+<\subsubsection*{Specification}>
+
+(value-of (let-exp vars exps final) env)
+= (let ((vals (map (lambda (e) (value-of e env)) exps)))
+    (value-of final (append-env vars vals env)))
