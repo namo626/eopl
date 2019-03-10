@@ -147,3 +147,34 @@ Expression ::= let {Identifier = Expression}* in Expression
 (value-of (let-exp vars exps final) env)
 = (let ((vals (map (lambda (e) (value-of e env)) exps)))
     (value-of final (append-env vars vals env)))
+
+<\subsection*{3.17 - Let*}>
+<\subsubsection*{Grammar}>
+
+Expression ::= let* {Identifier = Expression}* in Expression
+
+<\subsubsection*{Specification}>
+
+(value-of (let*-exp vars exps body) env)
+= (if (null? vars)
+      (value-of body env)
+      (value-of
+       (let*-exp (cdr vars) (cdr exps) body)
+       (extend-env (car vars)
+                   (value-of (car exps) env)
+                   env)))
+
+<\subsection*{Unpack}>
+<\subsection*{Grammar}>
+
+Expression ::= unpack {Identifier}* = Expression in Expression
+
+<\subsubsection*{Specification}>
+
+(value-of (unpack-exp vars ls body) env)
+= (let ((val (value-of ls env))
+        (xs (list-of-expval val)))
+    (if (not (= (length xs) (length vars)))
+        (error)
+        (value-of body
+                  (append-env vars xs env))))

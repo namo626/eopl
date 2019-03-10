@@ -13,84 +13,71 @@
       ))
 
 (define the-grammar
-  '((program (expression) a-program)
-
-    (expression (number) const-exp)
-    (expression
+  '([program (expression) a-program]
+    [expression (number) const-exp]
+    [expression (identifier) var-exp]
+    [expression
      ("-" "(" expression "," expression ")")
-     diff-exp)
-
-    (expression
+     diff-exp]
+    [expression
      ("+" "(" expression "," expression ")")
-     add-exp)
-
-    (expression
+     add-exp]
+    [expression
      ("*" "(" expression "," expression ")")
-     mult-exp)
-
-    (expression
+     mult-exp]
+    [expression
      ("/" "(" expression "," expression ")")
-     div-exp)
-
-    (expression
+     div-exp]
+    [expression
      ("cons" "(" expression "," expression ")")
-     cons-exp)
-
-    (expression
+     cons-exp]
+    [expression
      ("car" "(" expression ")")
-     car-exp)
-
-    (expression
+     car-exp]
+    [expression
      ("cdr" "(" expression ")")
-     cdr-exp)
-
-    (expression
+     cdr-exp]
+    [expression
      ("emptylist")
-     null-exp)
-
-    (expression
+     null-exp]
+    [expression
      ("list" "(" (separated-list expression ",") ")")
-     list-exp)
-
-    (expression
+     list-exp]
+    [expression
      ("cond" (separated-list bool-expression "==>" expression ",") "end")
-     cond-exp)
-
-    (expression
+     cond-exp]
+    [expression
      ("if" bool-expression "then" expression "else" expression)
-     if-exp)
-
-    (expression (identifier) var-exp)
-
-    (expression
+     if-exp]
+    [expression
      ("let" (arbno identifier "=" expression) "in" expression)
-     let-exp)
-
-    (expression
+     let-exp]
+    [expression
+     ("let*" (arbno identifier "=" expression) "in" expression)
+     let*-exp]
+    [expression
      ("minus" "(" expression ")")
-     minus-exp)
+     minus-exp]
+    [expression
+     ("unpack" (arbno identifier) "=" expression "in" expression)
+     unpack-exp]
 
     ;; boolean expressions
-    (bool-expression
+    [bool-expression
      ("zero?" "(" expression ")")
-     zero?-exp)
-
-    (bool-expression
+     zero?-exp]
+    [bool-expression
      ("null?" "(" expression ")")
-     null?-exp)
-
-    (bool-expression
+     null?-exp]
+    [bool-expression
      ("equal?" "(" expression "," expression ")")
-     equal?-exp)
-
-    (bool-expression
+     equal?-exp]
+    [bool-expression
      ("greater?" "(" expression "," expression ")")
-     greater?-exp)
-
-    (bool-expression
+     greater?-exp]
+    [bool-expression
      ("less?" "(" expression "," expression ")")
-     less?-exp)
-
+     less?-exp]
 
     ))
 
@@ -147,6 +134,15 @@
          ;; [bool-val (bool) (expval->bool val)]
 
          [else (eopl:error 'expval->list "~s is not an ExpVal!" val)]))
+
+;; ExpVal -> List of ExpVals
+(define (list-of-expval val)
+  (cases expval val
+         [empty-val () '()]
+         [list-val (head tail)
+                   (cons head
+                         (list-of-expval tail))]
+         [else (eopl:error 'list-of-expval "~s is not a list-val" val)]))
 
 ;; ExpVal -> ExpVal
 (define (head-val val)
@@ -219,6 +215,21 @@
                   (let ((vals (map (lambda (e) (value-of e env)) exps)))
                     (value-of body
                               (append-env vars vals env)))]
+         [let*-exp (vars exps body)
+                   (if (null? vars)
+                       (value-of body env)
+                       (value-of
+                        (let*-exp (cdr vars) (cdr exps) body)
+                        (extend-env (car vars)
+                                    (value-of (car exps) env)
+                                    env)))]
+         [unpack-exp (vars lst body)
+                     (let* ((val1 (value-of lst env))
+                            (vals (list-of-expval val1)))
+                       (if (not (= (length vars) (length vals)))
+                           (eopl:error 'value-of "Unpack has unequal bindings and values")
+                           (value-of body
+                                     (append-env vars vals env))))]
          [minus-exp (exp1)
                     (let* ((val1 (value-of exp1 env))
                            (num1 (expval->num val1)))
