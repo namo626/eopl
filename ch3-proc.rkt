@@ -1,6 +1,16 @@
 #lang eopl
 
-(require "environment.rkt﻿")
+(require "environment.rkt")
+
+(define init-env
+  (lambda ()
+    (extend-env
+     'i (num-val 1)
+     (extend-env
+      'v (num-val 5)
+      (extend-env
+       'x (num-val 10)
+       (empty-env))))))
 
 ;; Parsing -> AST
 (define the-lexical-spec
@@ -40,6 +50,10 @@
      proc-exp)
 
     (expression
+     ("letproc" identifier "(" identifier ")" expression "in" expression)
+     letproc-exp)
+
+    (expression
      ("(" expression expression ")")
      call-exp)
 
@@ -67,6 +81,18 @@
   [bool-val (bool boolean?)]
   [proc-val (proc proc?)])
 
+;; ExpVal -> Int
+(define (expval->num val)
+  (cases expval val
+         [num-val (num) num]
+         [else (eopl:error 'expval->num "~s is not a num-val" val)]))
+
+;; ExpVal -> Bool
+(define (expval->bool val)
+  (cases expval val
+         [bool-val (bool) bool]
+         [else (eopl:error 'expval->bool "~s is not a bool-val" val)]))
+
 (define (expval->proc val)
   (cases expval val
          [proc-val (proc) proc]
@@ -86,6 +112,10 @@
 
 
 ;; The interpreter
+
+(define (run string)
+  (value-of-program (scan&parse string)))
+
 ;; value-of-program : Program -> ExpVal
 (define value-of-program
   (lambda (pgm)
@@ -97,33 +127,47 @@
 (define value-of
   (lambda (exp env)
     (cases expression exp
-           (const-exp (num) (num-val num))
-           (var-exp (var) (apply-env env var))
-           (diff-exp (exp1 exp2)
+           [const-exp (num) (num-val num)]
+           [var-exp (var) (apply-env env var)]
+           [diff-exp (exp1 exp2)
                      (let ((val1 (value-of exp1 env))
                            (val2 (value-of exp2 env)))
                        (let ((num1 (expval->num val1))
                              (num2 (expval->num val2)))
                          (num-val
-                          (- num1 num2)))))
-           (zero?-exp (exp1)
+                          (- num1 num2))))]
+           [zero?-exp (exp1)
                       (let ((val1 (value-of exp1 env)))
                         (let ((num1 (expval->num val1)))
                           (if (zero? num1)
                               (bool-val #t)
-                              (bool-val #f)))))
-           (if-exp (exp1 exp2 exp3)
+                              (bool-val #f))))]
+           [if-exp (exp1 exp2 exp3)
                    (let ((val1 (value-of exp1 env)))
                      (if (expval->bool val1)
                          (value-of exp2 env)
-                         (value-of exp3 env))))
-           (let-exp (var exp1 body)
+                         (value-of exp3 env)))]
+           [let-exp (var exp1 body)
                     (let ((val1 (value-of exp1 env)))
                       (value-of body
-                                (extend-env var val1 env))))
-           (proc-exp (var body)
-                     (proc-val (procedure var body env)))
-           (call-exp (rator rand)
+                                (extend-env var val1 env)))]
+           [proc-exp (var body)
+                     (proc-val (procedure var body env))]
+           ;; ex 3.19
+           [letproc-exp (name var body next)
+                        (value-of (let-exp name (proc-exp var body) next) env)]
+
+           [call-exp (rator rand)
                      (let ((proc (expval->proc (value-of rator env)))
                            (arg (value-of rand env)))
-                       (apply-procedure proc arg))))))
+                       (apply-procedure proc arg))])))
+
+
+(define sample
+  "let x = 200 in let f = proc (z) -(z,x) in let x = 100 in let g = proc (z) -(z,x) in -((f 1), (g 1))")
+
+(define sample2
+  "let x = 200 in letproc f (z) -(z,x) in let x = 100 in letproc g (z) -(z,x) in -((f 1), (g 1))")
+
+(define curried
+  "let f = proc (x) proc (y) -(x, -(0,y)) in ((f 2) 3)")
